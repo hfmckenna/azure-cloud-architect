@@ -1,0 +1,97 @@
+\documentclass[a4paper,14pt]{report}
+\usepackage{listings}
+\usepackage{color}
+\pagestyle{headings}
+\usepackage[utf8]{inputenc}
+\author{Hugh McKenna}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{white}{rgb}{1,1,1}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+language=bash,
+aboveskip=3mm,
+belowskip=3mm,
+showstringspaces=false,
+columns=flexible,
+basicstyle={\small\ttfamily},
+numbers=none,
+color=\color{white},
+numberstyle=\tiny\color{gray},
+keywordstyle=\color{blue},
+commentstyle=\color{dkgreen},
+stringstyle=\color{mauve},
+breaklines=true,
+breakatwhitespace=true,
+tabsize=3
+}
+
+\begin{document}
+\chapter{Designing Infrastructure}
+
+\section{Azure Cloud Capabilities}
+
+\paragraph{Creating a web server}
+Web servers will be used throughout the course. Simply providing a cloud computer instead of a
+physical machine, running IIS to serve a web application and remote desktop to access and edit.
+
+\begin{lstlisting}[
+    caption = {Creating a VM with IIS Exercise}
+,label={lst:lstlisting}]
+> az account set --subscription {{ Subscription Name }}
+> az group create --name {{ Resource group name }} --location {{ e.g westeurope }}
+> az az vm create --resource-group azure-cloud-capabilities --name web01 --image Win2019Datacenter --admin-username web01 --public-ip-sku Standard
+> az vm open-port --port 80,443 --resource-group {{ Resource group name }} --name web01
+\end{lstlisting}
+
+\\
+You will be asked to create a password for the admin user. Once the VM is created you should
+be able to enter the generated IP in a Remote Desktop app and enter the admin password.
+\begin{enumerate}
+    \item Visit \%SystemDrive\%/inetpub/wwwroot
+    \item Create an index.html with any content you like
+    \item Visit the VM using it's public IP
+\end{enumerate}
+
+\paragraph{High Availability}
+Ensure users are always able to access your services in an optimal state. Whether that is providing fallbacks in the
+case of maintenance or unplanned outage, resources in a localised data center or load balancing between multiple instances.
+\\
+\begin{itemize}
+    \item \textbf{Availability Zones} An instance across multiple data centres, within the same region
+    \item \textbf{VM Scale Sets} Instances spin up and down based on demand
+    \item \textbf{Availablity Sets} Contains multiple Fault domains for unplanned outages, Update domains for planned
+    \item \textbf{Load Balancer} Resources in different regions to mitigate against disasters
+    \begin{itemize}
+        \item \textbf{Application Gateway} is more advanced, can handle routing based on HTTP metadata
+        \item \textbf{Front Door} handles encryption requests as well as decryption
+        \item \textbf{Azure Load Balancer} balances traffic based on load
+        \item \textbf{Traffic Manager} balances traffic based on geolocation
+    \end{itemize}
+\end{itemize}
+\begin{lstlisting}[
+    caption = {Create 2 VMs and load balancer}
+,label={lst:lstlisting}]
+    > az group create --name azure-cloud-capabilities --location westeurope
+    > az vm availability-set create -n azure-cloud-capabilities-avset -g azure-cloud-capabilities --platform-fault-domain-count 2 --platform-update-domain-count 2
+    > az network public-ip create -g azure-cloud-capabilities --name webip --allocation-method Static
+    > az vm create --resource-group azure-cloud-capabilities --name web01 --image Win2019Datacenter --admin-username web01 --availability-set azure-cloud-capabilities-avset
+    > az vm create --resource-group azure-cloud-capabilities --name web02 --image Win2019Datacenter --admin-username web02 --availability-set azure-cloud-capabilities-avset
+    > az vm open-port --port 80,443 --resource-group azure-cloud-capabilities --name web01
+    > az vm open-port --port 80,443 --resource-group azure-cloud-capabilities --name web02
+    > az network lb create -g azure-cloud-capabilities -n weblb --frontend-ip-name frontendpool --backend-pool-name backendpool --public-ip-address webip
+    > az network vnet create -g azure-cloud-capabilities -n webvnet --subnet-name websubnet
+    > az network lb probe create -g azure-cloud-capabilities --lb-name weblb -n weblbprobe --protocol tcp --port 80
+    > az network lb rule create -g azure-cloud-capabilities --lb-name weblb -n weblbrule --protocol tcp --frontend-port 80 --backend-port 80 --frontend-ip-name frontendpool --backend-pool-name backendpool --probe-name weblbprobe
+\end{lstlisting}
+
+\paragraph{Backend Pools} With no public IP specified when the VMs are created you should now be able to allocate them to the
+backend pool generated under the load balancer. This can be done on the CLI but is easier by visiting the resource in
+the Azure GUI.
+\begin{lstlisting}[caption={To Delete All Resources In The Group}]
+az group delete --no-wait -n azure-cloud-capabilities
+\end{lstlisting}
+
+\end{document}
