@@ -95,6 +95,12 @@
 
     \begin{lstlisting}[caption={DNN Web App}]
         > az mysql server create -n mydnn -g dnn-web-app -l westeurope --geo-redundant-backup Disabled --sku-name GP_Gen5_2 --storage-size 256000 -u mydnn -p {{ password }}
+        > az appservice plan create -g dnn-web-app -n dnnwebappplan
+        > az webapp create -g dnn-web-app -n dnnwebapp --runtime dotnet:6 --plan dnnwebappplan
     \end{lstlisting}
+    \\
+    Connect to the web app via FTP and upload the release candidate of the DNN app in the web root.
+    \\
+    https://github.com/dnnsoftware/Dnn.Platform/releases
 
 \end{document}
