@@ -18,11 +18,11 @@
     columns=flexible,
     basicstyle={\small\ttfamily},
     numbers=none,
-    color=\color{white},
-    numberstyle=\tiny\color{gray},
+    color=\color{rgb}{1,1,1},
+    numberstyle=\tiny\color{rgb}{0.5,0.5,0.5},
     keywordstyle=\color{blue},
-    commentstyle=\color{dkgreen},
-    stringstyle=\color{mauve},
+    commentstyle=\color{rgb}{0,0.6,0},
+    stringstyle=\color{rgb}{0.58,0,0.82},
     breaklines=true,
     breakatwhitespace=true,
     tabsize=3
@@ -30,7 +30,6 @@
 
 \begin{document}
     \chapter{Designing Infrastructure}
-
 
     \section{Azure Cloud Capabilities}
 
@@ -46,9 +45,7 @@
     > az vm open-port --port 80,443 --resource-group {{ Resource group name }} --name web01
     \end{lstlisting}
 
-    \\
-    You will be asked to create a password for the admin user. Once the VM is created you should
-    be able to enter the generated IP in a Remote Desktop app and enter the admin password.
+    You will be asked to create a password for the admin user. Once the VM is created you should be able to enter the generated IP in a Remote Desktop app and enter the admin password.
     \begin{enumerate}
         \item Visit \%SystemDrive\%/inetpub/wwwroot
         \item Create an index.html with any content you like
@@ -56,13 +53,11 @@
     \end{enumerate}
 
     \paragraph{High Availability}
-    Ensure users are always able to access your services in an optimal state. Whether that is providing fallbacks in the
-    case of maintenance or unplanned outage, resources in a localised data center or load balancing between multiple instances.
-    \\
+    Ensure users are always able to access your services in an optimal state. Whether that is providing fallbacks in the case of maintenance or unplanned outage, resources in a localised data center or load balancing between multiple instances.
     \begin{itemize}
         \item \textbf{Availability Zones} An instance across multiple data centres, within the same region
         \item \textbf{VM Scale Sets} Instances spin up and down based on demand
-        \item \textbf{Availablity Sets} Contains multiple Fault domains for unplanned outages, Update domains for planned
+        \item \textbf{Availability Sets} Contains multiple Fault domains for unplanned outages, Update domains for planned
         \item \textbf{Load Balancer} Resources in different regions to mitigate against disasters
         \begin{itemize}
             \item \textbf{Application Gateway} is more advanced, can handle routing based on HTTP metadata
@@ -98,9 +93,33 @@
         > az appservice plan create -g dnn-web-app -n dnnwebappplan
         > az webapp create -g dnn-web-app -n dnnwebapp --runtime dotnet:6 --plan dnnwebappplan
     \end{lstlisting}
-    \\
+
     Connect to the web app via FTP and upload the release candidate of the DNN app in the web root.
-    \\
     https://github.com/dnnsoftware/Dnn.Platform/releases
+
+    \paragraph{Create VPN Gateways} can be used to connect on premises environments to your Azure cloud.
+
+    \begin{lstlisting}[caption={Create VPN Gateway}]
+        > az network public-ip create --name vpnGW1IP --resource-group create-vpn-gateway --sku Basic --location westeurope
+        > az network vnet create -n vpngw1 --resource-group create-vpn-gateway --location westeurope --subnet-name GatewaySubnet --subnet-prefix 10.0.0.0/16 10.0.0.0/24
+        > az network vnet-gateway create --name mynetworkgw1 --resource-group create-vpn-gateway --vnet vpngw1 --vpn-gateway-generation Generation1 --sku VpnGW1 --public-ip-addresses vpnGW1IP --gateway-type Vpn --location westeurope
+    \end{lstlisting}
+
+    \paragraph{Use NSG to open ports for FTP} With the Network Security Group, you can utilize inbound and outbound rules to deny/allow network traffic. The Network Security Group is similar to a firewall but will just have basic functionality. Advanced features like Threat intelligence-based filtering and Source/destination Network Translation are not available in NSG but you will have access to these features through the Azure Firewall.
+
+    \begin{lstlisting}[caption={Use NSG to open ports for FTP}]
+        > az vm create --resource-group use-nsg-to-open-ports-for-ftp -n myVM --image Win2019Datacenter --public-ip-sku Standard --admin-username azureuser
+        > az vm open-port --port 80 --resource-group myResourceGroup --name myVM
+        Open PowerShell on your local machine and run the following command using the public IP address of the VM.
+        > mstsc /v:publicIpAddress
+        Open PowerShell on your VM and install a web server with the following command.
+        > Install-WindowsFeature -name Web-Server -IncludeManagementTools
+        > Install-WindowsFeature -name Web-Ftp-Server -IncludeManagementTools
+        > $SiteName="myftpsite"
+        > $RootFolderpath="C:\inetpub\wwwroot"
+        > $PortNumber=21
+        > New-WebFtpSite -Name $SiteName -PhysicalPath $RootFolderpath -Port $PortNumber -Verbose -Force
+        Open ports on the VM to allow FTP access via port 21 and do the same for automatically generated NSG that the VM has been assigned.
+    \end{lstlisting}
 
 \end{document}
